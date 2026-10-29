@@ -2,9 +2,23 @@
 
 # `retour` (a `detour` Fork)
 
-[![Language (Rust)][rust-shield]][rust]
-
+[![Crates.io][crates-badge]][crates-url]
+[![docs.rs][docs-badge]][docs-url]
+[![Lcense][license-badge]][license-url]
+[![Cargo Check/Tests][actions-badge]][actions-url]
 </div>
+
+[crates-badge]: https://img.shields.io/crates/v/retour.svg
+[crates-url]: https://crates.io/crates/retour
+
+[docs-badge]: https://docs.rs/retour/badge.svg
+[docs-url]: https://docs.rs/retour
+
+[license-badge]: https://img.shields.io/crates/l/retour
+[license-url]: ./LICENSE
+
+[actions-badge]: https://github.com/Hpmason/retour-rs/actions/workflows/ci.yml/badge.svg
+[actions-url]: https://github.com/Hpmason/retour-rs/actions/workflows/ci.yml
 
 (Fork of original [detour-rs](https://github.com/darfink/detour-rs) 
 that works on nightly after nightly-2022-11-07)
@@ -115,6 +129,13 @@ Part of the library's external user interface was inspired by
 [minhook-rs][minhook], created by [Jascha-N][minhook-author], and it contains
 derivative code of his work.
 
+## Injection Methods
+This crate provides the ability to hook functions in other applications, but does not provide the utilities necessary for injecting/attaching to another process. If you're looking for ways to inject your hooking library here are some approaches you can look into:
+
+- dll injection libraries such as [dll-syringe](https://crates.io/crates/dll-syringe)
+- LD_PRELOAD on *nix platforms
+- Various debuggers, including x64dbg and Cheat Engine
+
 ## Appendix
 
 - *EIP relocation*
@@ -140,8 +161,6 @@ derivative code of his work.
   trailing `NOP` instructions will be replaced, to make room for the detour.*
 
 <!-- Links -->
-[rust-shield]: https://img.shields.io/badge/powered%20by-rust-blue.svg?style=flat-square
-[rust]: https://www.rust-lang.org
 [minhook-author]: https://github.com/Jascha-N
 [minhook]: https://github.com/Jascha-N/minhook-rs/
 [detour-rs]: https://github.com/darfink/detour-rs
