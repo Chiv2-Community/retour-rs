@@ -1,5 +1,30 @@
 //! The underlying disassembler should be opaque to the outside.
-use iced_x86::{Instruction, Mnemonic, OpKind, Register};
+use crate::{
+  error::{Error, Result},
+  util,
+};
+use iced_x86::{Decoder, DecoderError, DecoderOptions, Instruction, Mnemonic, OpKind, Register};
+
+/// Decode one instruction without reading past its end.
+pub unsafe fn decode_instruction(address: *const u8) -> Result<Instruction> {
+  let mut bytes = [0; 15]; // Maximum x86 instruction length.
+  for index in 0..bytes.len() {
+    bytes[index] = util::read_unaligned(address.wrapping_add(index))?;
+    let mut decoder = Decoder::with_ip(
+      usize::BITS,
+      &bytes[..=index],
+      address as u64,
+      DecoderOptions::NONE,
+    );
+    let instruction = decoder.decode();
+    match decoder.last_error() {
+      DecoderError::None => return Ok(instruction),
+      DecoderError::NoMoreBytes => {},
+      _ => return Err(Error::InvalidCode),
+    }
+  }
+  Err(Error::InvalidCode)
+}
 
 pub trait InstructionExt {
   /// Returns the instructions relative branch offset, if applicable.

@@ -5,47 +5,6 @@ use std::cell::UnsafeCell;
 use std::fmt;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-/// Follow common x64 entry-point detours before disassembling a target.
-///
-/// UE4SS/PolyHook2 may already replace a function entry with an indirect
-/// absolute jump. Relocating that six-byte stub as though it were the
-/// original prologue can fail; following the chain lets a second detour
-/// compose with the existing hook.
-#[cfg(target_arch = "x86_64")]
-unsafe fn follow_entry_jumps(mut target: *const ()) -> *const () {
-  for _ in 0..8 {
-    let address = target as usize;
-    let opcode = std::ptr::read(address as *const u8);
-    let next = match opcode {
-      0xE9 => {
-        let displacement = std::ptr::read_unaligned((address + 1) as *const i32) as isize;
-        (address as isize + 5 + displacement) as *const ()
-      }
-      0xEB => {
-        let displacement = std::ptr::read((address + 1) as *const i8) as isize;
-        (address as isize + 2 + displacement) as *const ()
-      }
-      0xFF if std::ptr::read((address + 1) as *const u8) == 0x25 => {
-        let displacement = std::ptr::read_unaligned((address + 2) as *const i32) as isize;
-        let slot = (address as isize + 6 + displacement) as *const usize;
-        std::ptr::read_unaligned(slot) as *const ()
-      }
-      _ => break,
-    };
-
-    if next.is_null() || next == target {
-      break;
-    }
-    target = next;
-  }
-  target
-}
-
-#[cfg(not(target_arch = "x86_64"))]
-unsafe fn follow_entry_jumps(target: *const ()) -> *const () {
-  target
-}
-
 /// An architecture-independent implementation of a base detour.
 ///
 /// This class is never instantiated by itself, it merely exposes an API
@@ -60,7 +19,6 @@ pub struct Detour {
 
 impl Detour {
   pub unsafe fn new(target: *const (), detour: *const ()) -> Result<Self> {
-    let target = follow_entry_jumps(target);
     if target == detour {
       Err(Error::SameAddress)?;
     }
@@ -68,8 +26,13 @@ impl Detour {
     // Lock this so OS operations are not performed in parallell
     let mut pool = memory::POOL.lock().unwrap();
 
-    if !util::is_executable_address(target)? || !util::is_executable_address(detour)? {
+    if !util::is_executable_address(detour)? {
       Err(Error::NotExecutable)?;
+    }
+
+    let target = arch::follow_entry_jumps(target)?;
+    if target == detour {
+      return Err(Error::SameAddress);
     }
 
     // Create a trampoline generator for the target function

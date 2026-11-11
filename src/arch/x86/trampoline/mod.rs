@@ -1,12 +1,9 @@
-use self::disasm::*;
+use super::disasm::*;
 use crate::arch::x86::thunk;
 use crate::error::{Error, Result};
 use crate::pic;
 use iced_x86::{Decoder, DecoderOptions, Instruction, OpKind};
-use std::ptr::slice_from_raw_parts;
 use std::{mem, slice};
-
-mod disasm;
 
 /// A trampoline generator (x86/x64).
 pub struct Trampoline {

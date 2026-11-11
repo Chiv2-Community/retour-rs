@@ -11,6 +11,7 @@
 ///
 /// - A `Patcher`, modifies a target in-memory.
 /// - A `Trampoline`, generates a callable address to the target.
+/// - A `follow_entry_jumps` function, resolves existing entry detours.
 pub use self::detour::Detour;
 
 use cfg_if::cfg_if;
@@ -20,7 +21,7 @@ use cfg_if::cfg_if;
 cfg_if! {
     if #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] {
         mod x86;
-        use self::x86::{Patcher, Trampoline, meta};
+        use self::x86::{Patcher, Trampoline, meta, follow_entry_jumps};
     } else {
         // TODO: Implement ARM/AARCH64/MIPS support!
     }
