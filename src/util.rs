@@ -21,6 +21,7 @@ pub unsafe fn read_unaligned<T: Copy>(address: *const T) -> Result<T> {
     if !region.protection().contains(region::Protection::READ) {
       return Err(Error::InvalidCode);
     }
+
     cursor = region.as_range().end;
   }
   Ok(std::ptr::read_unaligned(address))

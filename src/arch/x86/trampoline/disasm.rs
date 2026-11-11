@@ -72,30 +72,34 @@ pub unsafe fn follow_entry_jumps(mut target: *const ()) -> Result<*const ()> {
     if target.is_null() || !visited.insert(target) {
       return Err(Error::InvalidCode);
     }
+
     if !util::is_executable_address(target)? {
       return Err(Error::NotExecutable);
     }
+
     let instruction = decode_instruction(target.cast())?;
     if !instruction.is_unconditional_jump() {
       return Ok(target);
     }
-    target = if let Some(destination) = instruction.relative_branch_target() {
-      destination as *const ()
-    } else {
-      if !matches!(instruction.code(), Code::Jmp_rm32 | Code::Jmp_rm64)
-        || instruction.op0_kind() != OpKind::Memory
-      {
-        return Ok(target);
-      }
-      // Flat DS addressing is known; runtime register values are not.
-      let address =
-        instruction.virtual_address(0, 0, |register, _, _| (register == Register::DS).then(|| 0));
-      let slot = match address {
-        Some(slot) => slot,
-        None => return Ok(target),
-      };
-      util::read_unaligned(slot as *const usize)? as *const ()
-    };
+
+    if let Some(destination) = instruction.relative_branch_target() {
+      target = destination as *const ();
+      continue;
+    }
+
+    let is_jump = matches!(instruction.code(), Code::Jmp_rm32 | Code::Jmp_rm64);
+    let is_memory = instruction.op0_kind() == OpKind::Memory;
+    if !is_jump || !is_memory {
+      return Ok(target);
+    }
+
+    // Flat DS addressing is known; runtime register values are not.
+    let address =
+      instruction.virtual_address(0, 0, |register, _, _| (register == Register::DS).then(|| 0));
+    match address {
+      Some(slot) => target = util::read_unaligned(slot as *const usize)? as *const (),
+      None => return Ok(target),
+    }
   }
 }
 
@@ -163,6 +167,7 @@ mod tests {
       } else {
         bytes.as_ptr().add(page - 2) as u32
       };
+
       bytes[2..6].copy_from_slice(&slot.to_le_bytes());
       assert!(follow_entry_jumps(target).is_err());
     }
@@ -187,6 +192,7 @@ mod tests {
       } else {
         bytes.as_ptr().add(8) as u32
       };
+
       bytes[18..22].copy_from_slice(&slot.to_le_bytes());
       let pointer = (previous as usize).to_le_bytes();
       bytes[8..8 + pointer.len()].copy_from_slice(&pointer);
