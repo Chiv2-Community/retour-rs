@@ -137,12 +137,15 @@ mod tests {
       let bytes = std::slice::from_raw_parts_mut(memory.as_mut_ptr::<u8>(), page);
       let target = bytes.as_ptr().cast();
       // Register, far, and TLS-segment jumps cannot be resolved here.
-      bytes[..2].copy_from_slice(&[0xFF, 0xE0]);
-      assert_eq!(follow_entry_jumps(target)?, target);
-      bytes[..6].copy_from_slice(&[0xFF, 0x2D, 0, 0, 0, 0]);
-      assert_eq!(follow_entry_jumps(target)?, target);
-      bytes[..7].copy_from_slice(&[0x64, 0xFF, 0x25, 0, 0, 0, 0]);
-      assert_eq!(follow_entry_jumps(target)?, target);
+      let unresolved: [&[u8]; 3] = [
+        &[0xFF, 0xE0],
+        &[0xFF, 0x2D, 0, 0, 0, 0],
+        &[0x64, 0xFF, 0x25, 0, 0, 0, 0],
+      ];
+      for code in unresolved {
+        bytes[..code.len()].copy_from_slice(code);
+        assert_eq!(follow_entry_jumps(target)?, target);
+      }
       bytes[..2].copy_from_slice(&[0xEB, 14]);
       bytes[16..18].copy_from_slice(&[0xEB, 0xEE]);
       assert_matches!(follow_entry_jumps(target), Err(Error::InvalidCode));
