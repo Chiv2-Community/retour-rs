@@ -1,4 +1,5 @@
 use self::disasm::*;
+pub use self::disasm::follow_entry_jumps;
 use crate::arch::x86::thunk;
 use crate::error::{Error, Result};
 use crate::pic;
