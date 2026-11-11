@@ -30,6 +30,11 @@ impl Detour {
       Err(Error::NotExecutable)?;
     }
 
+    let target = arch::follow_entry_jumps(target)?;
+    if target == detour {
+      return Err(Error::SameAddress);
+    }
+
     // Create a trampoline generator for the target function
     let margin = arch::meta::prolog_margin(target);
     let trampoline = arch::Trampoline::new(target, margin)?;

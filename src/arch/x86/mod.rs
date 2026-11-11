@@ -1,5 +1,6 @@
 pub use self::patcher::Patcher;
 pub use self::trampoline::Trampoline;
+pub use self::trampoline::follow_entry_jumps;
 
 pub mod meta;
 mod patcher;
