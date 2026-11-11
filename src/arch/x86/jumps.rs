@@ -1,9 +1,10 @@
-use super::disasm::{decode_instruction, InstructionExt};
 use crate::{
   error::{Error, Result},
   util,
 };
-use iced_x86::{Code, OpKind, Register};
+use iced_x86::{
+  Code, Decoder, DecoderError, DecoderOptions, Instruction, Mnemonic, OpKind, Register,
+};
 use std::collections::HashSet;
 
 /// Other systems may apply detours or other binary patches at runtime, so we
@@ -19,11 +20,14 @@ pub unsafe fn follow_entry_jumps(mut target: *const ()) -> Result<*const ()> {
       return Err(Error::NotExecutable);
     }
     let instruction = decode_instruction(target.cast())?;
-    if !instruction.is_unconditional_jump() {
+    if instruction.mnemonic() != Mnemonic::Jmp {
       return Ok(target);
     }
-    target = if let Some(destination) = instruction.relative_branch_target() {
-      destination as *const ()
+    target = if matches!(
+      instruction.op0_kind(),
+      OpKind::NearBranch16 | OpKind::NearBranch32 | OpKind::NearBranch64
+    ) {
+      instruction.near_branch_target() as *const ()
     } else {
       if !matches!(instruction.code(), Code::Jmp_rm32 | Code::Jmp_rm64)
         || instruction.op0_kind() != OpKind::Memory
@@ -31,8 +35,8 @@ pub unsafe fn follow_entry_jumps(mut target: *const ()) -> Result<*const ()> {
         return Ok(target);
       }
       // Flat DS addressing is known; runtime register values are not.
-      let address = instruction
-        .virtual_address(0, 0, |register, _, _| (register == Register::DS).then(|| 0));
+      let address =
+        instruction.virtual_address(0, 0, |register, _, _| (register == Register::DS).then(|| 0));
       let slot = match address {
         Some(slot) => slot,
         None => return Ok(target),
@@ -40,6 +44,27 @@ pub unsafe fn follow_entry_jumps(mut target: *const ()) -> Result<*const ()> {
       util::read_unaligned(slot as *const usize)? as *const ()
     };
   }
+}
+
+/// Decode one instruction without reading past its end.
+unsafe fn decode_instruction(address: *const u8) -> Result<Instruction> {
+  let mut bytes = [0; 15]; // Maximum x86 instruction length.
+  for index in 0..bytes.len() {
+    bytes[index] = util::read_unaligned(address.wrapping_add(index))?;
+    let mut decoder = Decoder::with_ip(
+      usize::BITS,
+      &bytes[..=index],
+      address as u64,
+      DecoderOptions::NONE,
+    );
+    let instruction = decoder.decode();
+    match decoder.last_error() {
+      DecoderError::None => return Ok(instruction),
+      DecoderError::NoMoreBytes => {},
+      _ => return Err(Error::InvalidCode),
+    }
+  }
+  Err(Error::InvalidCode)
 }
 
 #[cfg(test)]
