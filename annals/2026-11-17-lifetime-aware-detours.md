@@ -27,3 +27,7 @@ The implementation is not yet committed, released, or independently verified her
 The source checkpoint and a local migration checkpoint say the separate UnchainedPlugin call-only binding migration was paused when this work started. Its requested organization is one native class per file under UE module namespaces; the latest migration was incomplete and had not passed a build. Its earlier 498-test result does not validate the paused state. This is context, not evidence that the plugin migration was completed or that its files belong in this repository.
 
 Before release, commit and review the implementation, verify the relevant test commands against the committed tree, investigate or separately track the nightly example failure, and resume plugin validation independently. Reconsider the API if higher-ranked signatures cannot be expressed safely or compatibly, supported ABIs fail, or native callers cannot establish the documented reference guarantees. Missing history includes exact option deliberations, source participant identities, and a durable issue or PR linking the two workstreams.
+
+## Subsequent developments
+
+2026-11-17: The `generic_detour!` name in the decision summary is superseded by the agreement to use `lifetime_detour!`; the rename remains unimplemented. The design decision remains accepted. See [Lifetime detour macro naming](2026-11-17-lifetime-detour-naming.md).
