@@ -38,11 +38,12 @@
 //! - [Generic](./struct.GenericDetour.html): A type-safe interface — the same
 //!   prototype is enforced for both the target and the detour. It is also
 //!   enforced when invoking the original target.
+//!   Use [`lifetime_detour!`] for higher-ranked signatures with per-call borrow
+//!   lifetimes, including returned references tied to arguments.
 //!
 //! - [Raw](./struct.RawDetour.html): The underlying building block that the
 //!   others types abstract upon. It has no type-safety and interacts with raw
-//!   pointers. It should be avoided unless any types are references, or not
-//!   known until runtime.
+//!   pointers. It should be avoided unless types are not known until runtime.
 //! 
 //! ## Supported Versions
 //! This crate, with default features, will support the MSRV in `Cargo.toml` 
@@ -112,6 +113,7 @@ pub use traits::{Function, HookableWith};
 
 #[macro_use]
 mod macros;
+mod lifetime_macros;
 
 // Modules
 mod alloc;

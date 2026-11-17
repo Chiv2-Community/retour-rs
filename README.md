@@ -130,6 +130,33 @@ $ cargo +nightly build --features="static-detour" --example messageboxw_detour
 $ cargo build --example kernel32_detour
 ```
 
+## Borrowed arguments and results
+
+Use `lifetime_detour!` when a signature has per-call lifetimes. It defines a
+named detour type without the fixed `Arguments`/`Output` associated types used
+by `GenericDetour`. No nightly features are required.
+
+```rust
+retour::lifetime_detour! {
+  pub struct Read: for<'a> unsafe extern "C" fn(object: &'a Object) -> &'a i32;
+}
+
+// Both arguments must satisfy the complete for<'a> signature.
+let hook = unsafe { Read::new(Object::read, replacement)? };
+let value: &i32 = unsafe { hook.call(&object) };
+```
+
+The returned borrow cannot outlive `object`. Multiple lifetimes, mutable
+references and lifetime-bearing argument/result types are supported. `call`
+is unsafe when the declared function is unsafe; constructors and patching
+operations are always unsafe. The type can be stored in an ordinary static
+initialization cell, but capturing closures are not supported.
+
+Native references must actually be live, aligned and satisfy Rust's aliasing
+rules. Lifetimes do not validate engine objects or synchronize patching,
+unloading or destruction with in-flight calls. Use raw pointers where those
+reference guarantees cannot be established.
+
 ## Mentions
 
 This is fork of the original [detour-rs][detour-rs] creator 
